@@ -1,49 +1,935 @@
-# Github workflow to compile latex and deploy the pdf to an orphan branch.
-# The latest compiled pdf is at available at e.g.
-# https://github.com/dgerosa/reponame/blob/build/filename.pdf
-# Davide Gerosa (2021) https://github.com/dgerosa
+\PassOptionsToPackage{table}{xcolor}
+\documentclass{report}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{graphicx, titling}
+\usepackage{mathtools}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\usepackage[margin=1.2in]{geometry}
+\usepackage{tikz}
+\usepackage[dutch]{babel}
+\usepackage{array}
+\bibliography{bibliografie}
+\usepackage{siunitx}
+\usepackage{pdfpages}
+\usepackage[dutch]{cleveref}
+\usepackage{caption} 
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{circuitikz}
+\usepackage{float}
+\usepackage[justification=centering]{caption}
+\usepackage[toc,page]{appendix}
+\definecolor{lightgray}{gray}{0.9}
 
-name: writeapaper
-on: [push]
-jobs:
-  paper:
-    runs-on: ubuntu-latest
-    env:
-      # Edit here with the names of your latex file and directory (can use ".")
-      DIR: 
-      FILE: P_O_Energy
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Install TeXlive
-        run: sudo apt-get update && sudo apt-get install texlive texlive-publishers texlive-science latexmk cm-super
-      - name: LaTeX compile
-        working-directory: ${{ env.DIR }}
-        #run: latexmk -pdf -bibtex ${{ env.FILE }}
-        run: pdflatex ${{ env.FILE }}; bibtex ${{ env.FILE }}; pdflatex ${{ env.FILE }}; pdflatex ${{ env.FILE }};
-      - name: move
-        run: mkdir -p github_artifacts && mv ${{ env.DIR }}/${{ env.FILE }}.pdf ./github_artifacts/
-      - name: Upload pdf as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.FILE }}.pdf
-          path: ./github_artifacts
-  deploy:
-    # Edit here if compiling multiple papers
-    needs: [paper]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
-        with:
-          path: github_artifacts
-      - name: move
-        run: mkdir -p github_deploy && mv github_artifacts/*/* github_deploy
-      - name: deploy on orphan branch
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./github_deploy
-          publish_branch: build
-          force_orphan: true
+
+\title{EBS}
+\author{}
+\date{2021-2022}
+
+\begin{document}
+	
+	\begin{titlepage}
+		\newpage
+		\thispagestyle{empty}
+		\frenchspacing
+		\hspace{-0.2cm}
+		\includegraphics[height=3.4cm]{sedes}
+		\hspace{0.2cm}
+		\rule{0.5pt}{3.4cm}
+		\hspace{0.2cm}
+		\begin{minipage}[b]{8cm}
+			\Large{Katholieke\newline Universiteit\newline Leuven}\smallskip\newline
+			\large{}\smallskip\newline
+			\textbf{Departement \newline Elektrotechniek}\smallskip
+		\end{minipage}
+		\hspace{\stretch{1}}
+		\vspace*{3.2cm}\vfill
+		\begin{center}
+			\begin{minipage}[t]{\textwidth}
+				\begin{center}
+					\LARGE{\rm{\textbf{\uppercase{Elektronische basisschakelingen - Practicum}}}}\\[5mm]
+				\end{center}
+			\end{minipage}
+		\end{center}
+		\vfill
+		\hfill\begin{center}%
+			\vbox to 7cm{\vfill\noindent
+				{%
+					{\rm \textbf{Groep 6}} \\[2mm]
+					{\rm Jordy Buyck, Florian Dendooven, Nathan Lingier, Nhan Nguyen, Jasper Pas, Hannelore Renders}
+					{\rm Academiejaar 2021--2022}
+				}
+			}
+		\end{center}
+		
+	\end{titlepage}
+	\pagebreak
+	
+\tableofcontents
+
+\chapter{Inleiding}
+
+Audioversterkers zijn haast niet meer uit het dagelijkse leven weg te denken. Van de moderne platenspelers in de woonkamer tot de grootste geluidsinstallaties op festivals, ze zijn alom aanwezig. Aan de basis van zulke versterkers liggen gesofisticeerde schakelingen met elektrische componenten als weerstanden, condensatoren, spoelen, transistoren en opamps.
+
+In het kader van het vak Elektronische Basisschakelingen wordt zelf aan de slag gegaan met de analyse en implementatie van een audioversterker, waarvan de schakeling is weergegeven op Figuur \ref{VV}.
+
+Eerst wordt een analyse gemaakt van de twee versterkingstrappen afzonderlijk, waarbij de componenten bepaald worden om de gewenste versterking van respectievelijk \SI{9}{\deci\bel} en \SI{6}{\deci\bel} te realiseren. Deze resultaten worden dan geverifieerd aan de hand van simulaties, waarna de schakeling omgezet wordt in een PCB-layout die als blauwdruk dient voor de fysieke implementatie van de versterker. Ten slotte worden hierop metingen uitgevoerd om de correcte werking ervan na te gaan.
+
+\begin{figure}[H]
+    \begin{centering}
+    \begin{circuitikz}[american, scale=0.7,transform shape]
+        \draw
+        (0,0) node[npn]{$T_3$}
+        (-0.845,0) -- (-1.25,0)
+        (-1.25,1) node[npn]{$T_2$}
+        (-1.25,0) -- (-1.25, 0.2222)
+        (0,0.7777) -- (0,2.7777)
+        (-1.25,1.7777) -- (-1.25,2.7777) node[circ, label=above:$V_{DD}$] {}
+        (0,2.7777) -- (-3, 2.7777)
+        (-3,2.7777) to[R,l_=$R_4$] (-3,1)
+        (-3,1) -- (-3,0.7777)
+        (-2.3,0.9) node[label=above:$V_2$] {}
+        (-3,1) -- (-2.1,1) 
+        (-3,0) node[npn]{$T_1$}
+        (-3,1) node[circ] {}
+        (0,-0.7777) to[R,l_=$R_5$] (0,-3.7777)
+        (-3,-0.7777) to[R,l_=$R_3$] (-3,-3.7777)
+        (0,-3.7777) node[circ] {}
+        (0,-3.7777) node[ground]{}
+        (-3,-3.7777) -- (0, -3.7777)
+        % (-3.7,0) node[label=left:$V_1$] {}
+        (0,-0.5) to[C=$C_3$] (3,-0.5)
+        (0,-0.5) node[circ] {}
+        (3,-0.5) node[circ, label=above:$V_{out}$]{}
+        (0,-3.7777) -- (3,-3.7777)
+        (3,-3.7777) node[circ] {}
+        (3,-1.63885) to[R=$R_L$] (3,-3.7777)
+        (3,-0.5) -- (3,-1.23885) 
+        (3,-1.23885) -- (3.2, -1.63885)
+        (3.1,-1.43885) node[label=right:$S_1$] {}
+        (3,-3.7777) -- (4.5,-3.7777)
+        (3,-0.5) -- (3.63885,-0.5)
+        (3.63885,-0.5) -- (4.03885,-0.3)
+        (3.83885,-0.4) node[label=above:$S_2$] {}
+        (4.5,-3.7777) -- (4.5,-0.8)
+        (4.03885,-0.5) -- (4.75,-0.5)
+        (0.1,-1.1) node[label=left:$V_3$] {}
+        (4.5,-0.8) -- (4.75,-0.8)
+        (4.75, -0.4) -- (4.75, -0.9)
+        (4.9, -0.4) -- (4.9, -0.9)
+        (4.9, -0.4) -- (4.75, -0.4)
+        (4.9, -0.9) -- (4.75, -0.9)
+        (5.3, -0.2) -- (5.3, -1.1)
+        (4.9, -0.9) -- (5.3, -1.1)
+        (4.9, -0.4) -- (5.3, -0.2)
+        (-8,0) to[pR] (-10,0)
+        (-8,0) to[R,l^=$R_2$](-6,0)
+        (-6,0) -- (-5,0)
+        (-10,0) to[R,l_=$R_1$] (-12,0)
+        (-12,0) to[C,l_=$C_1$] (-14,0)
+        (-14,0)  to[sV,l_=$V_{in}$] (-14,-2)
+        (-14,-2) -- (-14,-2) node[tlground]{}
+        (-9,0) -- (-9,2)
+        (-9,2) to[C,l^=$C_2$] (-5,2)
+        (-5,2) -- (-5,0) node[circ] {}
+        (-5,0) -- (-5,-2) node[circ] {}
+        (-5.8,-2) -- (-4.5,-2) 
+        (-7,-2) node[op amp]{}
+        (-9,-0.3) -- (-9,-1.51)
+        (-9,-1.51) -- (-8.2,-1.51)
+        (-8.2,-2.49) -- (-10,-2.49)
+        (-10,-2.49) to[V,l_=$V_B$] (-10,-4.49)
+        (-10,-4.49) node[tlground]{}
+        (-9.4,0) node[label={above:$R_p$}] {}
+        (-4.5,-2) -- (-4.25,-2)
+        (-4.25,-2) -- (-4.25,0)
+        (-4.25,0) -- (-3.85,0)
+        (-4.6,-2) node[label={above:$V_1$}] {}
+        (-7,-2.5) -- (-7,-3) node[ground]{}
+        (-7,-1.5) -- (-7,-1)
+        (-7.15,-1) -- (-6.85,-1)
+        (-6.95,-1) node[label={right:$V_{DD}$}] {}
+        ;
+    \end{circuitikz}
+    \caption{Volledige versterker}
+    \label{VV}
+    \end{centering}
+\end{figure}
+	
+
+\chapter{Berekeningen}
+\label{berek}
+\section{Eerste versterkingstrap}
+
+\subsection{Keuze weerstanden en capaciteiten}
+
+In eerste instantie maken we abstractie van de potentiometer $R_P$ om de basiswerking van de eerste versterkingstrap na te gaan, wat resulteert in het linkerschema op Figuur \ref{ZP}. De overdrachtsfunctie wordt gegeven door de verhouding tussen de uit- en ingangsspanning $V_{uit}$ en $V_{in}$, wat op een teken na gelijk is aan de verhouding tussen de impedanties $Z_2$ en $Z_1$,  respectievelijk de parallelschakeling van $R_2$ en $C_2$ en de serieschakeling van $R_1$ en $C_1$. Uiteindelijk geeft dit
+
+
+
+\begin{equation}
+    H(s) = \frac{V_{uit}}{V_{in}}= -\frac{Z_2}{Z_1} = -\frac{\frac{R_2}{R_2C_2s+1}}{\frac{1+sC_1R_1}{sC_1}} = - \frac{sR_2C_1}{(1+sC_1R_1)(1+sR_2C_2)}.
+    \label{for:overdrachtsfunctie}
+\end{equation}
+
+Het rechterschema op Figuur \ref{ZP} geeft het oorspronkelijke schema met de potentiometer $R_P$ weer, waarvan
+de overdrachtsfunctie wordt gegeven door Formule \ref{for:overdrachtsfunctie1}. Hierin is $\alpha$ een parameter tussen 0 en 1, die de stand van de potentiometer aangeeft.
+
+
+
+
+\begin{equation}
+    H(s,\alpha) = -\frac{sC_1(R_2+(1-\alpha))R_p}{(1+sC_1(R_1+\alpha R_p))(1+sC_2(R_2+(1-\alpha)R_p))}
+    \label{for:overdrachtsfunctie1}
+\end{equation}
+
+\begin{figure}[h]
+    \center
+    \begin{circuitikz}[american, scale=0.4, transform shape]
+        \draw
+        (2,0) -- (0,0)
+        (2,0) to[R,l^=$R_2$](4,0)
+        (4,0) -- (5,0)
+        (0,0) to[R,l_=$R_1$] (-2,0)
+        (-2,0) to[C,l_=$C_1$] (-4,0)
+        (-4,0)  to[sV,l_=$V_{in}$] (-4,-2)
+        (-4,-2) -- (-4,-2) node[tlground]{}
+        (1,0) -- (1,2)
+        (1,2) to[C,l^=$C_2$] (5,2)
+        (5,2) -- (5,0) node[circ] {}
+        (5,0) -- (5,-2) node[circ] {}
+        (4.2,-2) -- (5.5,-2) 
+        (3,-2) node[op amp]{}
+        (1,0) -- (1,-1.51)
+        (1,-1.51) -- (1.8,-1.51)
+        (1.8,-2.49) -- (0,-2.49)
+        (0,-2.49) to[V,l_=$V_B$] (0,-4.49)
+        (0,-4.49) node[tlground]{}
+        (5.5,-2) node[label={above:$V_1$}] {}
+        (3,-2.5) -- (3,-3) node[ground]{}
+        (3,-1.5) -- (3,-1)
+        (2.85,-1) -- (3.15,-1)
+        (3.05,-1) node[label={right:$V_{DD}$}] {}
+        (1,0)  node[circ] {}
+        ;
+    \end{circuitikz}
+    \begin{circuitikz}[american, scale=0.4,transform shape]
+        \draw
+        (2,0) to[pR] (0,0)
+        (2,0) to[R,l^=$R_2$](4,0)
+        (4,0) -- (5,0)
+        (0,0) to[R,l_=$R_1$] (-2,0)
+        (-2,0) to[C,l_=$C_1$] (-4,0)
+        (-4,0)  to[sV,l_=$V_{in}$] (-4,-2)
+        (-4,-2) -- (-4,-2) node[tlground]{}
+        (1,0) -- (1,2)
+        (1,2) to[C,l^=$C_2$] (5,2)
+        (5,2) -- (5,0) node[circ] {}
+        (5,0) -- (5,-2) node[circ] {}
+        (4.2,-2) -- (5.5,-2) 
+        (3,-2) node[op amp]{}
+        (1,-0.3) -- (1,-1.51)
+        (1,-1.51) -- (1.8,-1.51)
+        (1.8,-2.49) -- (0,-2.49)
+        (0,-2.49) to[V,l_=$V_B$] (0,-4.49)
+        (0,-4.49) node[tlground]{}
+        (0.6,0) node[label={above:$R_p$}] {}
+        (5.5,-2) node[label={above:$V_1$}] {}
+        (3,-2.5) -- (3,-3) node[ground]{}
+        (3,-1.5) -- (3,-1)
+        (2.85,-1) -- (3.15,-1)
+        (3.05,-1) node[label={right:$V_{DD}$}] {}
+        ;
+    \end{circuitikz}    
+    \caption{Eerste versterkingstrap zonder potentiometer (links) en met potentiometer (rechts)}
+    \label{ZP}
+\end{figure}
+
+\pagebreak
+
+Figuur \ref{bodealgemeen} geeft de bodeplot van bovenstaande algemene overdrachtsfunctie weer. Hierop is te zien dat de frequenties die gelegen zijn tussen de polen met eenzelfde factor worden versterkt, terwijl de buitenliggende frequenties verzwakt worden.
+De versterker heeft dus een banddoorlaatfilter-werking. De ligging van de twee polen wordt berekend volgens
+
+\begin{equation}
+    P_1 = -\frac{1}{C_1(R_1+ \alpha R_p)}
+\end{equation}
+\begin{equation}
+    P_2 = -\frac{1}{C_2(R_2+(1- \alpha )R_p)}
+\end{equation}
+
+Bij $\alpha = 0$ is de versterking maximaal, wat gevisualiseerd is in het rood op Figuur \ref{bodealgemeen}. Bij toenemende waarde van $\alpha$ zullen de polen steeds verder uit mekaar verwijderd zijn en de versterking bijgevolg dalen. De potentiometer heeft dus de functie van een volumeknop.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{bodealgemeen.png}
+	\caption{Bodeplot van de algemene overdrachtsfunctie $H(s,\alpha)$}
+	\label{bodealgemeen}
+\end{figure}
+
+Aangezien het om een geluidsversterker gaat, moeten enkel de frequenties binnen het menselijke gehoorspectrum versterkt worden, namelijk deze tussen \SI{20}{\hertz} en \SI{20}{\kilo\hertz}. Daarnaast is als specificatie opgelegd dat de te realiseren versterking in dit spectrum \SI{9}{\deci\bel} bedraagt.
+
+Vermits enkel het gebied tussen de twee polen beschouwd wordt, kan de overdrachtsfunctie vereenvoudigd worden. 
+Voorbij de  eerste pool is de constante term immers verwaarloosbaar klein ten opzichte van de andere term van deze pool, zodat er geldt dat $(1+sC_1(R_1+\alpha R_p))$ $\approx$ $sC_1(R_1+\alpha R_p)$. Voor de tweede pool geldt juist het omgekeerde in het gebied voor deze pool, waardoor $(1+sC_2(R_2+(1-\alpha)R_p))$ $\approx$ $1$. Dit levert 
+
+\begin{equation}
+     H(s,\alpha) = -\frac{R_2+(1-\alpha)R_p}{R_1+\alpha R_p}
+    \label{for:eenvoudigeoverdrachtsfct}.
+\end{equation}
+
+De versterking van \SI{9}{\deci\bel} wordt ingesteld bij $\alpha = 0$, zodanig dat het signaal bij verdere verdraaiing van de potentiometer steeds minder hard versterkt wordt. Versterkingen ver boven \SI{9}{\deci\bel} kunnen immers leiden tot gehoorschade. Verder heeft dit als voordeel dat, afhankelijk van de gekozen weerstanden, de eerste trap zowel een versterker of verzwakker kan zijn.
+Bij $\alpha = 0$ en een versterking van \SI{9}{\deci\bel} of 2.82 levert Formule \ref{for:eenvoudigeoverdrachtsfct} het onderstaand, onderling verband tussen de weerstanden $R_1$, $R_2$ en $R_P$.
+
+\begin{equation}
+    \lvert H(s,0) \rvert = \frac{R_2+R_p}{R_1} = 2.82
+    \label{verbandr}
+\end{equation}
+
+Verder legt de ligging van de polen onderstaande eisen op.
+
+\begin{equation}
+    2\pi\cdot20 > \frac{1}{C_1R_1}
+    \label{verbandp1}
+\end{equation}
+\begin{equation}
+    2\pi\cdot20000 < \frac{1}{C_2(R_2+R_p)}
+    \label{verbandp2}
+\end{equation}
+
+Aan de hand van Formule \ref{verbandr}, \ref{verbandp1} en \ref{verbandp2}, en rekening houdend met de beschikbare componenten uit Appendix \ref{bescomp}, kunnen de combinaties van waarden die voldoen aan de specificaties van het ontwerp gevonden worden. Hiervoor is een Python-script geschreven dat terug te vinden is in Appendix \ref{python}.
+
+In een eerste iteratie werd een combinatie gevonden die een theoretische versterking haalde van \SI{9.04}{\deci\bel}, met polen op \SI{19.5}{\hertz} en \SI{21277}{\hertz}. Bij het invullen van deze waarden in de oorspronkelijke overdrachtsfunctie, gegeven door Formule \ref{for:overdrachtsfunctie1}, blijkt echter dat de werkelijke versterking lager is dan \SI{9}{\deci\bel}. De verklaring hiervoor is de vereenvoudiging in Formule \ref{for:eenvoudigeoverdrachtsfct}. Verder ligt de versterking op \SI{20}{\hertz} en \SI{20}{\kilo\hertz} lager dan de versterking tussen de polen. Dit komt omdat de voorstelling in Figuur \ref{bodealgemeen} opnieuw een vereenvoudiging is. Beide hoeken aan de polen komen in werkelijkheid overeen met een geleidelijke overgang tussen de twee gebieden naast de pool, waardoor de versterking in het gebied rond de pool lager zal zijn dan de theoretische waarde ervan. Dit heeft als resultaat dat niet het volledige gehoorspectrum uniform wordt versterkt.
+
+Daarom is in een volgende iteratie naar een combinatie gezocht waarvan de theoretische versterking iets hoger ligt dan  de gewenste \SI{9}{\deci\bel}, zodat de werkelijke versterking groot genoeg is en de polen verder uit elkaar liggen. Hierdoor ligt de versterking op \SI{20}{\hertz} en \SI{20}{\kilo\hertz} dichter bij de werkelijke versterking. Tabel \ref{comp1} toont de combinaties van de gevonden waarden voor de componenten. Enkele eigenschappen van de versterker bij verschillende waarden van $\alpha$ zijn terug te vinden in Tabel \ref{eig1}.
+
+\begin{table}[h]
+    \centering
+    \rowcolors{1}{}{lightgray}
+
+    \begin{tabular}{lrrrrr}
+    \toprule
+    & $R_1$ & $R_2$ & $R_p$ & $C_1$ & $C_2$ \\
+    \midrule
+    Waarde & \SI{100}{\ohm} & \SI{100}{\ohm} &  \SI{200}{\ohm} & \SI{100}{\micro\farad} & \SI{22}{\nano\farad} \\
+    \bottomrule
+    \end{tabular}
+    \caption{Waarde componenten trap 1}
+    \label{comp1}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \rowcolors{1}{}{lightgray}
+    \begin{tabular}{lrrr}
+    \toprule
+    & $\alpha = 0$ & $\alpha = 0.5$ & $\alpha = 1$ \\
+    \midrule
+    Theoretische versterking & \SI{9.54}{\deci\bel} & \SI{0}{\deci\bel} & \SI{-9.54}{\deci\bel} \\
+    Reële versterking & \SI{9.1}{\deci\bel} & \SI{-0.25}{\deci\bel} & \SI{-9.70}{\deci\bel} \\
+    Frequentie $P_1$ & \SI{15.92}{\hertz} & \SI{7.96}{\hertz} & \SI{5.31}{\hertz} \\
+    Frequentie $P_2$ & \SI{24114}{\hertz} & \SI{36172}{\hertz} & \SI{72343}{\hertz} \\
+    Versterking op \SI{20}{\hertz}& \SI{4.45}{\deci\bel} & \SI{-2.91}{\deci\bel} & \SI{-11.59}{\deci\bel} \\
+    Versterking op \SI{20}{\kilo\hertz}& \SI{4.29}{\deci\bel} & \SI{-3.83}{\deci\bel} & \SI{-11.66}{\deci\bel} \\
+    \bottomrule
+    \end{tabular}
+    \caption{Eigenschappen versterker trap 1}
+    \label{eig1}
+\end{table}
+
+Tabel \ref{eig1} bevestigt de vaststelling dat de eerste trap als versterker of verzwakker kan functioneren, afhankelijk van de waarde van $\alpha$. Theoretisch gezien is de filterwerking perfect symmetrisch, maar door de eerder gemaakte vereenvoudiging in Formule \ref{for:eenvoudigeoverdrachtsfct} is dit praktisch niet het geval. Dit betekent dat in combinatie met de tweede trap van \SI{6}{\deci\bel} een maximale versterking van \SI{15.08}{\deci\bel} en een minimale versterking van \SI{-3.7}{\deci\bel} gerealiseerd kan worden.
+
+\subsection{Keuze opamp}
+
+Ter beschikking staan drie opamps, waarvan de eigenschappen weergegeven zijn in Tabel \ref{tab:opamps}. De keuze is gemaakt op basis van de \textit{gain bandwidth} (GBW) die gegeven wordt door GBW $ = A_cf_{1c}$. Een eerste eis is het realiseren van een minimale versterking van \SI{9}{\deci\bel} bij $f_{1c} \geq \SI{20}{\kilo\hertz}$. Concreet betekent dit dat de GBW minstens \SI{56000}{\hertz} moet bedragen, wat het geval is voor alle opamps. Daarnaast speelt ook het bereik van de voedingsspanning een rol bij de bruikbaarheid van de opamp. De elektrische schakeling werkt immers op een voedingsspanning van \SI{9}{\volt}, wat buiten het bereik valt van het tweede model. We kunnen dus vrij kiezen tussen de opamps TL081CP en TL071CP/IP.
+
+\begin{table}[h]
+    \centering
+    \rowcolors{1}{}{lightgray}
+
+    \begin{tabular}{lrrr}
+    \toprule
+    opamp & Voedingsspanning & GBW & Versterking \\
+    \midrule
+    TL081CP & $\pm 2.25$ - $ \pm \SI{20}{\volt}$ & \SI{5.25}{\mega\hertz} & \SI{120}{\deci\bel} \\
+    OPA344PA & $\pm 2.50$- $\pm  \SI{5.5}{\volt}$ & \SI{1}{\mega\hertz} & \SI{120}{\deci\bel}\\
+    TL071CP/IP & $\pm 2.25 $ - $ \pm \SI{20}{\volt}$ & \SI{3}{\mega\hertz} & \SI{120}{\deci\bel}\\
+    \bottomrule
+    \end{tabular}
+    \caption{Overzicht mogelijke opamps}
+    \label{tab:opamps}
+\end{table}
+
+\section{Tweede versterkingstrap}\subsection{DC-analyse}\label{DC-analyseTekst}
+Bij de DC-analyse van de tweede versterkingstrap maken we gebruik van de  0\textsuperscript{e}-orde benadering voor bipolaire transistoren. Dit betekent dat $V_{BE} = \SI{0.7}{\volt}$ en $I_b$ verwaarloosbaar klein is. Volgens deze benadering geldt dan voor de instelstroom $I_{BE}$ dat
+
+\begin{equation}
+I_{BE} \approx \frac{(V_{in} - V_{BE})}{R_s},
+\label{IBE}
+\end{equation}
+met ingangspanning $V_{in}$, instelspanning $V_{BE}$ en instelweerstand $R_s$ van de bipolaire transistor. Directe toepassing hiervan op transistor $T_1$ levert
+
+\begin{equation}
+I_{c1}=\frac{(V_{1}-\SI{0.7}{\volt})}{R_3},
+\label{Ic1}
+\end{equation}
+
+waaruit volgt dat $V_1 = I_{c1}\cdot R_3 + \SI{0.7}{\volt} $. Merk op dat we Formule \ref{IBE} niet rechtstreeks kunnen toepassen op het Darlingtonpaar dat bestaat uit de transistoren $T_2$ en $T_3$. Voor dit paar geldt wel dat
+\begin{equation}
+V_{E2} = V_2 - V_{BE}
+\label{T2}
+\end{equation}
+\begin{equation}
+V_3 = V_{E2} - V_{BE}.
+\label{T3}
+\end{equation}
+
+Met behulp van de tweede wet van Kirchhoff, i.e. de spanningswet, kunnen bovenstaande vergelijkingen verder uitgewerkt worden. Immers, dit levert $V_2 = V_{DD} - I_{c1} \cdot R_4$, wat met Formule \ref{Ic1} geschreven kan worden als
+
+\begin{equation}
+V_2 = V_{DD} - (V_1 - \SI{0.7}{\volt})\frac{R_4}{R_3},
+\end{equation}
+
+en vervolgens na het invullen van de gevonden uitdrukking voor $V_2$ in Formule \ref{T2} en \ref{T3} onderstaande vergelijkingen oplevert.
+
+\begin{equation}
+V_{E2} = V_{DD} - (V_1 - \SI{0.7}{\volt})\frac{R_4}{R_3} - \SI{0.7}{\volt}
+\end{equation}
+
+\begin{equation}
+V_3 = V_{DD} - (V_1 - \SI{0.7}{\volt})\frac{R_4}{R_3} - \SI{1.4}{\volt}
+\end{equation}
+
+Tot slot berekenen we aan de hand van Formule \ref{IBE} de collectorstroom $I_{c3}$, waarbij $V_{in} = V_{E2}$ en $R_s = R_5$. Dit geeft ons
+
+\begin{equation}
+I_{c3}=\frac{(V_{E2} - \SI{0.7}{\volt})}{R_5}=\frac{(V_{DD}- (V_{1}-\SI{0.7}{\volt})\frac{R_4}{R_3}-\SI{1.4}{\volt})}{R_5}.
+\end{equation}
+
+\begin{figure}[H]
+    \center
+    \begin{circuitikz}[american, scale=0.4,transform shape]
+        \draw
+        (0,0) node[npn]{$T_3$}
+        (-0.845,0) -- (-1.25,0)
+        (-1.25,1) node[npn]{$T_2$}
+        (-1.25,0) -- (-1.25, 0.2222)
+        (0,0.7777) -- (0,2.7777)
+        (-1.25,1.7777) -- (-1.25,2.7777) node[circ, label=above:$V_{DD}$] {}
+        (0,2.7777) -- (-3, 2.7777)
+        (-3,2.7777) to[R,l_=$R_4$] (-3,1)
+        (-3,1) -- (-3,0.7777)
+        (-2.3,0.9) node[label=above:$V_2$] {}
+        (-3,1) -- (-2.1,1) 
+        (-3,0) node[npn]{$T_1$}
+        (-3,1) node[circ] {}
+        (0,-0.7777) to[R,l_=$R_5$] (0,-3.7777)
+        (-3,-0.7777) to[R,l_=$R_3$] (-3,-3.7777)
+        (0,-3.7777) node[circ] {}
+        (-3,-3.7777) -- (0, -3.7777)
+        (-3.7,0) node[label=left:$V_1$] {}
+        (0,-0.5) to[C=$C_3$] (3,-0.5)
+        (0,-0.5) node[circ] {}
+        (3,-0.5) node[circ, label=above:$V_{out}$]{}
+        (0,-3.7777) -- (3,-3.7777)
+        (3,-3.7777) node[circ] {}
+        (3,-1.63885) to[R=$R_L$] (3,-3.7777)
+        (3,-0.5) -- (3,-1.23885) 
+        (3,-1.23885) -- (3.2, -1.63885)
+        (3.1,-1.43885) node[label=right:$S_1$] {}
+        (3,-3.7777) -- (4.5,-3.7777)
+        (3,-0.5) -- (3.63885,-0.5)
+        (3.63885,-0.5) -- (4.03885,-0.3)
+        (3.83885,-0.4) node[label=above:$S_2$] {}
+        (4.5,-3.7777) -- (4.5,-0.8)
+        (4.03885,-0.5) -- (4.75,-0.5)
+        (0.1,-1.1) node[label=left:$V_3$] {}
+        (4.5,-0.8) -- (4.75,-0.8)
+        (4.75, -0.4) -- (4.75, -0.9)
+        (4.9, -0.4) -- (4.9, -0.9)
+        (4.9, -0.4) -- (4.75, -0.4)
+        (4.9, -0.9) -- (4.75, -0.9)
+        (5.3, -0.2) -- (5.3, -1.1)
+        (4.9, -0.9) -- (5.3, -1.1)
+        (4.9, -0.4) -- (5.3, -0.2)
+        ;
+    \end{circuitikz}
+    \caption{Tweede versterkingstrap}
+    \label{TVT}
+\end{figure}
+
+
+\subsection{AC-analyse}\label{kleinsignaalschema}
+
+Voor de AC-analyse wordt het kleinsignaalschema beschouwd dat bestaat uit een spanningsversterkingstrap en een vermogentrap. Deze zijn weergegeven op Figuur \ref{VT}. In de eerste trap wordt het signaal versterkt, terwijl de tweede trap het vermogen ervan opdrijft, wat de namen verklaart. Een transistor wordt gekarakteriseerd door zijn transconductantie $g_{m}$, die berekend wordt volgens
+
+\begin{equation}
+    g_{m} = \frac{I_{CE}}{kT/q}. 
+    \label{GM}
+\end{equation}
+
+met thermisch voltage $kT/q = \SI{26}{\milli\volt}$. De collectorstroom $I_{CE}$ wordt gegeven door Formule \ref{IC}, waarbij $I_{s} = \SI{1e-15}{\ampere}$ en $V_{BE} = \SI{0.7}{\volt}$. Aangezien zowel de collectorstroom $I_{CE}$ als het thermisch voltage $kT/q$ gelijk is voor de drie transistoren, zijn ook hun transconductanties gelijk, namelijk $g_{m} = \SI{1.89e-2}{\siemens}$.
+
+\begin{equation}
+    I_{CE} = I_{s}e^{{\frac{V_{BE}}{kT/q}}} % = \SI{4.93e-4}{\ampere}
+    \label{IC}
+\end{equation}
+
+\begin{figure}[H]
+    \center
+    \begin{circuitikz}[american, scale=0.4, transform shape]
+        \draw
+        (-1,2) to [open, v=$V_1$] (-1,0)
+        (-1,2) -- (0,2)
+        (0,0) to[R,l_=$r_{\pi 1}$] (0,2)
+        (-1,0) -- (0,0) node[circ] {}
+        (0,0) -- (1,0) node[circ] {}
+        (1,0) to[R,l_=$R_3$] (1,-2)
+        (1,-2) -- (4,-2)
+        (1,0) -- (2,0)
+        (2,0) to[cI,l_=$g_{m1}V_{BE}$, invert] (2,2)
+        (2,2) -- (4,2)
+        (4,2) to[R,l_=$R_4$] (4,-2)
+        (2,-2) -- (2,-3.6)
+        node[ground]{}
+        (4,2) -- (5,2)
+        (5,2) to [open, v=$V_2$] (5,-2) 
+        (4,-2) -- (5, -2)
+        (4,2) node[circ] {}
+        (4,-2) node[circ] {}
+        ;
+    \end{circuitikz}
+    \begin{circuitikz}[american, scale=0.4, transform shape]
+        \draw
+        (0,0) -- (1,0)
+        (1,0) to[R=$r_{\pi 3}$] (1,-2)
+        (1,-2) -- (3,-2)
+        (2,-2) to[R=$R_{eq}$] (2,-4)
+        (2,-4) -- (2,-4) node[tlground]{} 
+        (3,-2) to[cI,l_=$g_{m3}$, invert] (3,2) node[circ] {}
+        (3,2) -- (4,2)
+        (4,2) -- (4.05,2) node[ground]{} 
+        (3,2) -- (0,2) 
+        (0,2) to[cI,l^=$g_{m2}$] (0,0) node[circ] {}
+        (0,0) -- (-2,0)
+        (-2,0) to[R,l_=$r_{\pi 2}$] (-2,2)
+        (-2,2) -- (-3,2)
+        (2,-2) node[circ] {}
+        ;
+    \end{circuitikz}
+    \caption{Kleinsignaalschema van de spanningsversterkerstrap (links) en vermogentrap (rechts)}
+    \label{VT}
+\end{figure}
+
+\subsection{Keuze weerstanden en capaciteiten}
+\label{bepalingR3enR4}
+Om de waarden van de componenten uit de tweede versterkingstrap te bepalen, moet gekeken worden naar de totale versterking die gerealiseerd moet worden. Merk hierbij op dat, in tegenstelling tot de vermogentrap, enkel de spanningsversterkingstrap het ingangssignaal versterkt, namelijk met \SI{6}{\deci\bel}.
+
+Aangezien de versterking gegeven wordt door $A = V_2/V_1$ volstaat het om een uitdrukking te vinden voor de in- en uitgangsspanning $V_1$ en $V_2$, weliswaar in functie van de te bepalen componenten, om de specificaties hiervan vast te leggen. In het kleinsignaalschema op Figuur \ref{VT} geldt volgens de spanningswet van Kirchoff dat
+
+\begin{equation}
+    \frac{V_{E1}-V_{1}}{r_{\pi}} + \frac{V_{E1}}{R_{3}} - g_{m1}V_{BE} = 0.
+\end{equation}
+Verder geldt dat $V_{E1} = V_{1} - V_{BE}$, waardoor bovenstaande formule herschreven kan worden tot
+
+\begin{equation}
+    \frac{V_{1}}{R_{3}} = \frac{V_{BE}}{r_{\pi}} + \frac{V_{BE}}{R_{3}} + g_{m1}V_{BE}.
+    \label{V1R3}
+\end{equation}
+
+Vermits de eerste term uit het rechterlid verwaarloosbaar klein is ten opzichte van de andere twee termen, o.a. omdat $1/r_\pi$ veel kleiner is dan $g_{m1}$, wordt deze voortaan buiten beschouwing gelaten. De uitdrukking voor de spanning $V_1$ is dan
+
+\begin{equation}
+    V_1 = V_{BE} + g_{m1}V_{BE}R_3.
+    \label{V1}
+\end{equation}
+
+
+
+Verder volgt uit de spanningswet van Kirchhoff een tweede gelijkheid uit het kleinsignaalschema, namelijk
+\begin{equation}
+    g_{m1}V_{BE} + \frac{V_{2}}{R_{4}} = 0,
+\end{equation}
+
+wat na herschrijven onderstaande uitdrukking voor $V_2$ levert.
+
+\begin{equation}
+    V_2 = -g_{m1}V_{BE}R_{4}
+\end{equation}
+
+Vertrekkend vanuit de vergelijkingen voor de in- en uitgangsspanning $V_1$ en $V_2$ wordt de totale versterking uiteindelijk gegeven door
+
+\begin{equation}
+    A = \frac{V_2}{V_1} =  \frac{-R_{4}}{1/g_m + R_{3}}.
+\label{A}
+\end{equation}
+
+Indien de weerstand $R_{3}$ groot genoeg gekozen wordt ten opzichte van $1/g_{m}$, mag van dit laatste abstractie gemaakt worden. Herinner dat $g_m = \SI{1.89e-2}{\siemens} \approx \SI{53}{\ohm}$, waardoor een gestandaardiseerde E-12 weerstand van \SI{560}{\ohm} volstaat om de vereenvoudiging uit te voeren. Met deze waarde voor $R_3$, en het gegeven dat de versterking \SI{6}{\deci\bel} moet zijn, volgt uit Formule \ref{A} dat $R_4 = \SI{1200}{\ohm}$. Wat de waarde van de condensator $C_3$ betreft, deze dient zo hoog mogelijk genomen te worden, dit om ervoor te zorgen dat bij de DC-analyse de capaciteit mag beschouwd worden als open keten, terwijl bij de AC-analyse dit mag gezien worden als een kortsluiting, wat het rekenwerk vereenvoudigt. Van de beschikbare condensatoren is deze met een capaciteit $C = \SI{470}{\micro\farad}$ de grootste, wat ook meteen $C_3$ bepaalt. Vermits de weerstanden $R_5$ en $R_L$ gegeven zijn, zijn alle compontenten uit de tweede versterkingstrap bepaald. In tabel \ref{comp2} zijn al deze componenten nog eens terug te vinden.
+
+\begin{table}[h]
+    \centering
+    \rowcolors{1}{}{lightgray}
+
+    \begin{tabular}{lrrrrr}
+    \toprule
+    & $R_3$ & $R_4$ & $R_5$ & $R_L$ & $C_3$ \\
+    \midrule
+    Waarde & \SI{560}{\ohm} & \SI{1200}{\ohm} &  \SI{47}{\ohm} & \SI{33}{\ohm} & \SI{470}{\micro\farad} \\
+    \bottomrule
+    \end{tabular}
+    \caption{Waarde componenten trap 2}
+    \label{comp2}
+\end{table}
+
+\chapter{Simulatieresultaten}
+
+Om de handgemaakte berekeningen te verifiëren, worden de schakelingen met \textit{LTSpice} gesimuleerd  en wordt nadien gecontroleerd of aan de specificaties voldaan is. De resultaten van de simulaties zijn terug te vinden in Appendix \ref{LTSpice}. 
+
+\section{Simulatie eerste versterkingstrap}
+Uitgaande van componenten uit Tabel \ref{comp1} is in eerste instantie een simulatie uitgevoerd voor $\alpha = 0$, aangezien de schakeling bij deze waarde van $\alpha$ is ontworpen. Het resultaat is weergegeven in Figuur \ref{plota0}. Aan de ingang wordt een eenheids-AC-signaal aangelegd, waardoor $V_{out}$ zonder meer de versterking voorstelt. De plot toont een bandfilter met een maximale versterking van iets meer dan \SI{9}{\deci\bel} en polen die iets breder liggen dan \SI{20}{\hertz} en \SI{20}{\kilo\hertz}. Deze resultaten voldoen aan de eigenschappen die terug te vinden zijn in Tabel \ref{eig1}.
+
+Daarnaast is een simulatie uitgevoerd met oplopende waarden van $\alpha$, van 0.1 tot 0.9 met stapgrootte 0.1. Het resultaat is voorgesteld in Figuur \ref{plota}. Hierop is te zien dat bij oplopende waarde van $\alpha$, de versterking steeds daalt en zelfs negatief wordt tot een maximale verzwakking van \SI{9}{\deci\bel}. De polen komen ook steeds verder uit elkaar te liggen, wat opnieuw overeenkomt met de eigenschappen uit Tabel \ref{eig1}.
+
+\section{Simulatie tweede versterkingstrap}
+
+Figuur \ref{SPICE2} geeft de tweede versterkingstrap met de berekende waarden uit Paragraaf \ref{bepalingR3enR4} weer, waarvan de simulatie te zien is in Figuur \ref{versterkingtrap2SPICE}. De schakeling realiseert zoals gewenst een versterking van \SI{6}{\deci\bel} binnen het menselijke gehoorspectrum, i.e. de frequenties tussen \SI{20}{\hertz} en \SI{20}{\kilo\hertz}. De vragen uit de opgavenbundel zullen nu beantwoord worden.\\
+
+\noindent \textbf{Simuleer de tweede trap en controleer of je het gewenste gedrag verkrijgt. Zijn de DCinstellingen correct, behaal je de gewenste versterking? Hoe zou je een mogelijke afwijking van het DC-instelpunt kunnen verklaren?}
+
+
+\noindent Door de waarden van de weerstanden $R_3$ en $R_4$ te veranderen, kan de invloed hiervan op de DC-instelling van $V_3$ nagegaan worden. Uitgaande van de waarden uit Tabel \ref{comp2} levert dit voor de spanningen $V_1$, $V_2$ en $V_3$ het resultaat op Figuur \ref{DC-analyseFiguur1}. Herinner dat volgens de berekeningen uit Paragraaf \ref{DC-analyseTekst} geldt dat $V_2=\SI{4.4}{V}$ en $V_3=\SI{3}{V}$ als $V_1=\SI{3}{V}$, wat ook overeenkomt met de simulatie. Zijn de weerstanden tien keer zo groot, dan zijn de spanningen lager dan berekend, zie Figuur \ref{DC-analyseFiguur2}. Een derde simulatie, waarbij de weerstanden slechts een tiende van hun oorspronkelijke waarde aannemen, is gegeven in \ref{DC-analyseFiguur3}. In tegenstelling tot de vorige simulatie is $V_3$ hier groter dan berekend. Aangezien een correcte DC-instelling van $V_3$ noodzakelijk is om een gewenste versterking te verkrijgen, worden voor $R_3$ en $R_4$ waarden gebruikt die de meest nauwkeurige waarde voor de spanning $V_3$ opleveren, namelijk $R_3 = \SI{560}{\ohm}$ en $R_4 = \SI{1200}{\ohm}$.\\
+
+\noindent \textbf{Ga de functie van transistoren T2 en T3 na door bijvoorbeeld de uitgang van de versterker
+(node V3) rechtstreeks te connecteren aan V2 (short m.a.w. V2 en V3). Wat merk je op?}
+
+
+\noindent Om de functie van het Darlingtonpaar na te gaan, wordt de ingang van transistor $T_2$ rechtstreeks verbonden met de uitgang van de versterker, m.a.w. door $V_{2}$ en $V_3$ kort te sluiten. De resulterende schakeling en de bijhorende simulatie worden weergegeven op respectievelijk Figuur \ref{V2V3short} en Figuur \ref{V2V3shortresultaat}. In tegenstelling tot de originele schakeling realiseert deze schakeling een maximale versterking \SI{-1}{\deci\bel}, wat uiteraard overeenkomt met een verzwakking van \SI{1}{\deci\bel}.
+
+\chapter{PCB}
+\section{PCB-layout}
+Om de schakeling te implementeren, ontwerpen we eerst een \textit{printed circuit board} layout met \textit{Eagle}. Naast de besproken componenten in Hoofdstuk \ref{berek} maken ook
+BNC en audio connectoren deel uit van de schakeling om respectievelijk een ingangssignaal aan te leggen en het uitgangssignaal te meten. Verder zorgen twee andere BNC connectoren voor metingen binnenin de schakeling en maakt de supply connector de verbinding met de voedingsspanning. Ten slotte wordt er gebruikgemaakt van een weerstandsdeler om de biasspanning van \SI{3}{\volt} aan de opamp te leveren. Ook wordt er een condensator geplaatst tussen de voedingsspanning en de grond om schommelingen in de voedingspanning te onderdrukken. Ten slotte wordt de schakelaar bij $R_L$, te zien op Figuur \ref{TVT}, gerealiseerd door een jumper. Het volledige elektrisch schema van de schakeling valt te bekijken in Appendix \ref{pcb}.
+Figuur \ref{PCBLayout} toont de PCB-layout, waarvan de uiteindelijke realisatie te zien is in Figuur \ref{PCBVoor} en Figuur \ref{PCBAchter}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.5\textwidth]{PCBLayout.png}
+	\caption{De layout van de PCB}
+	\label{PCBLayout}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.5\textwidth]{PCBVoor.jpg}
+	\caption{De voorkant van het PCB-bordje}
+	\label{PCBVoor}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.5\textwidth]{PCBAchter.jpg}
+	\caption{De achterkant van het PCB-bordje}
+	\label{PCBAchter}
+\end{figure}
+
+\section{Metingen}
+
+Aan de hand van twee metingen wordt de correcte werking van de PCB nagegaan. Bij de eerste meting is enkel de weerstand $R_L$ verbonden met het circuit. Daarna volgt een tweede meting, waarbij de luidspreker in de schakeling is opgenomen. De metingen zelf zijn niet gelukt. In onderstaande secties zijn de vragen uit de opgavenbundel beantwoord echter met gebrek aan correcte metingen.
+
+\subsection{Test met resistieve belasting}
+\label{testres}
+
+\textbf{Wat zijn de DC-instelpunten en zijn deze correct?} 
+
+\noindent Bij verbinding van de scope met de PCB kunnen de spanningen gevisualiseerd worden met het programma \textit{MultiChannel}. De resultaten van de eerste meting, waarbij enkel de weerstand $R_L$ verbonden is met het circuit, zijn te zien op Figuur \ref{scopev1}, Figuur \ref{scopev2} en Figuur \ref{scopevout}. De bekomen waarden komen niet overeen met de verwachtingen. Immers, $V_1 = \SI{1}{\volt}$, $V_2 \approx \SI{9}{\volt}$ en $V_{out} \approx \SI{0}{\volt}$. De afwijkingen op de DC-instelpunten zijn hoogstwaarschijnlijk het gevolg van slecht verbonden componenten op de PCB.\\
+
+\noindent \textbf{Bereken voor een aantal frequenties (binnen en buiten de gehoorsband) de versterking
+van de verschillende trappen en de versterking van de totale audioversterker. Is dit zoals
+gewenst?}
+
+\noindent Aangezien $V_1$ en $V_2$ gemeten zijn voor een welbepaalde frequentie, kan de versterking van de spannningsversterkingstrap bepaald worden. In dit geval zou deze gelijk zijn aan $A=V_2/V_1=9$, wat niet overeenkomt met de berekende waarde. De versterkingen van de andere trappen en de totale audioversterker voor een aantal frequenties zijn echter niet gemeten. Berekeningen uit vorige secties geven aan dat de versterking binnen de gehoorsband voor de eerste versterkingstrap maximaal \SI{9.08}{\deci\bel} is en voor de tweede versterkingstrap overeenkomt met \SI{6}{\deci\bel}. De totale audioversterker heeft dan een versterking van \SI{15.08}{\deci\bel}. \\
+
+\noindent \textbf{Kan je het effect van de extra condensator over $R_3$ waarnemen?} 
+
+\noindent Indien een extra condensator over $R_{3}$ geplaatst wordt, resulteert dit in een verhoging van de versterking en zou de bandbreedte naar hogere frequenties verschuiven. \\
+
+\noindent \textbf{Wat zou er gebeuren als we voor een van de weerstanden een te kleine waarde gebruiken?} 
+
+\noindent Als een van de weerstanden een te kleine waarde heeft, zal de versterking verkleinen of omslaan naar een verzwakking. \\
+
+\noindent \textbf{Wat als je per ongeluk $R_3$ en $R_4$ zou hebben omgewisseld tijdens het solderen?}
+
+\noindent Wanneer de weerstanden $R_{3}$ en $R_{4}$ zijn gewisseld tijdens het solderen, zorgt de tweede versterkingstrap voor een verzwakking van het inkomend signaal. \\
+
+\noindent \textbf{Tijdens de berekeningen maakten we gebruik van een ideaal model voor de opamp. Hoe beïnvloedde dit de berekeningen en wat is het effect van de niet-ideale
+werking van deze component op de metingen?} 
+
+\noindent De versterking van de ideale opamp is oneindig waardoor de ingansspanningen gelijk zijn. De niet ideale werking van de opamp zal een invloed hebben op de meetresultaten. De versterking is dan niet meer oneindig waardoor een spanningsverschil ontstaat tussen de ingangen. Dit heeft een verkleining van de bandbreedte als gevolg. Ook kan de opamp maar een signaal versterken tot de voedingspanning. \\
+
+\noindent \textbf{Wat zou er gebeuren als we voor T3 dezelfde transistor gebruiken als voor $T_1$ en $T_2$? Of anderzijds, waarom hebben we voor $T_3$ een ander type gebruikt?}
+ 
+\noindent $T_{3}$ is een ander type transistor dan $T_{1}$ en $T_{2}$. De oorzaak hiervan is het feit dat $T_{3}$ een groter vermogen moet leveren. Hierdoor is de transistor krachtiger en groter. \\
+
+\newpage 
+\noindent \textbf{Waarom gebruiken we voor $R_5$ en $R_L$ een ander type weerstand dan voor bijvoorbeeld
+$R_1$?}
+
+\noindent Voor $R_{5}$ en $R_{L}$ is een ander type weerstand gebruikt aangezien door deze weerstanden een grotere stroom loopt. Het gevolg is dat ze langer en dikker moeten zijn aangezien ze meer warmte moeten dissiperen. \\
+
+\noindent \textbf{Wat gebeurt er als we de bias spanning aan de negatieve ingangsterminal van de opamp verkeerd instellen? Wat bijvoorbeeld als deze 0 wordt? Of \SI{7}{V}? Hoe beïnvloedt dit je
+uitgangssignaal?}
+
+\noindent Het uitgangssignaal wordt versterkt of verzwakt naargelang de waarde van de biasspanning. Op die manier is de versterking afhankelijk van deze spanning, namenlijk bij lagere biasspanning zal de versterking verkleinen.
+
+\subsection{Auditieve test}
+
+Wanneer we echter een geluidssignaal uit een smartphone het circuit laten binnenstromen, krijgen we wel degelijk het afgespeelde lied, mits wat ruis, te horen uit de headset. Het gemeten uitgangssignaal hierbij is te vinden in Figuur \ref{scopemuziek}. Nu zullen de vragen uit de opgavenbundel beantwoord worden. \\
+
+\noindent \textbf{De versterker bestaat uit twee trappen. Denk je dat het mogelijk is dezelfde functionaliteit (totale versterking + filterwerking) te realiseren met slechts een van beide trappen? Zo ja, hoe? Zo nee, waarom niet?}
+
+\noindent Met de eerste versterkingstrap zou een dergelijke versterking van \SI{15}{\deci\bel} behaald kunnen worden. Aangezien de filterwerking in de eerste trap plaatsvindt, blijft ook deze functionaliteit behouden. De polen moeten dan op dezelfde plaats liggen maar de gewenste versterking is dan \SI{15}{\deci\bel}. Deze voorwaarde kan in formule \ref{for:eenvoudigeoverdrachtsfct} ingevuld worden om de componenten te bekomen. \\
+
+
+\noindent \textbf{Kan je iets meer zeggen over de stabiliteit van de eerste versterkingstrap? Is het circuit stabiel? De opamp die je gebruikt in de eerste trap bevat ook een pool. Heeft dit invloed op de stabiliteit of zijn er voorwaarden waaraan de opamp dient te voldoen om een stabiele werking te garanderen? Heeft dit de keuze van jullie opamp beïnvloed?}
+
+\noindent Indien de pool van de opamp te dicht bij de $P_2$ ligt kan het zijn dat de fasemarge tegen het einde van het gehoorspectrum niet groot genoeg is. Hierdoor kan het signaal ongewenst inverteren. Daarom moet de GBW van de opamp zo groot mogelijk gekozen worden. Daarom is de gebruikte opamp TI081CP goed aangezien deze de grootste GBW heeft van de twee opties (zie tabel \ref{tab:opamps}). \\
+
+\noindent Wegens gebrek aan tijd kon het effect van de potentiometer niet achterhaald worden. Ook de amplitude waarbij distortie ontstaat en aan welk effect dit te wijten is, werd niet gevonden. Verder werd niet gecontroleerd in hoeverre de verterker een vlak verloop kent in de audioband bij het variëren van de frequentie van het ingangssignaal over het gehele gehoorbereik.
+
+
+\chapter{Besluit}
+In dit practicum werd vertrokken van handberekeningen om een ruwe schatting te maken van de componenten in de versterker, wat een dieper inzicht gaf in de werking ervan. Daarna leerden we werken met \textit{LTSpice}, waarin de versterkingstrappen uitvoerig gesimuleerd werden. Hiermee kon de correctheid van de handgemaakte berekeningen geverifieerd worden. Eens de simulatie op punt gesteld was, begon het ontwerp van de PCB met behulp van \textit{Eagle} om de elektronische verbindingen tussen de componenten te realiseren. Uiteindelijk restte enkel nog het solderen van de gekozen componenten, wat inzicht gaf in de praktische realisatie van een audioversterker. Tot slot werden analyses uitgevoerd op de afgewerkte PCB om de werking ervan te testen. Over het algemeen zorgde dit practicum voor een dieper inzicht in de werking van de verschillende schakelingen en componenten zoals gezien in de oefenzittingen en de hoorcolleges.
+
+\newpage
+\begin{appendices}
+
+\chapter{Beschikbare componenten}
+\label{bescomp}
+
+
+\begin{table}[h]
+\centering
+\rowcolors{1}{}{lightgray}
+\begin{tabular}{lll}
+    \toprule
+    $C_1$, $C_3$ [µF] & $C_2$ [nF] & $R_P$ [$\SI{}{\ohm}$] \\
+    \midrule
+    1 & 1 & 50 \\
+    3.3 & 1.5 & 100\\ 
+    4.7 & 2.2 & 200\\
+    6.8 & 2.7 & 220\\
+    10 & 3.3 & 500\\
+    22 & 4.7 &\\
+    33 & 6.8 &\\
+    47 & 10 &\\
+    68 & 22 &\\
+    100 & 100&\\
+    220&&\\
+    330&&\\
+    470&&\\
+    \bottomrule
+\end{tabular}
+\caption{Beschikbare componenten voor specifieke circuit elementen}
+\label{waardeconpot}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\rowcolors{1}{}{lightgray}
+\begin{tabular}{c}
+    \toprule
+    $R_1$, $R_2$, $R_3$, $R_4$ [$10^n\Omega$] \\
+    \midrule
+    1.0 \\
+    1.2 \\
+    1.5 \\
+    1.8 \\
+    2.2 \\
+    2.7 \\
+    3.3 \\
+    3.9 \\
+    4.7 \\
+    5.6 \\
+    6.8\\
+    8.2\\
+    \bottomrule
+\end{tabular}
+\caption{Mogelijke waarden voor de weerstanden}
+\label{waardeweer}
+\end{table}
+
+
+\chapter{Python code bepaling componenten}
+\label{python}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{cond.png}
+	\caption{Een python script om op basis van de condensatoren uit tabel \ref{waardeconpot} de grootteorde van de nodige weerstanden te bepalen}
+	\label{cond}
+\end{figure}   
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{weer.png}
+	\caption{Een python script om op basis van de componenten uit tabellen \ref{waardeconpot} en \ref{waardeweer} mogelijke combinaties te vinden die oplossingen zijn voor het probleem. Over de grootteorde van de weerstanden gevonden in \ref{cond} moet manueel geïtereerd worden door de waarden op lijn 9 en 11 aan te passen.}
+	\label{weer}
+\end{figure}   
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{gain.png}
+	\caption{Een python script om bij een combinatie van componenten gevonden in \ref{weer} de reële versterking van \SI{20}{\hertz} en \SI{20}{\kilo\hertz} te vinden. Deze code is ook gebruikt om de versterking van enkele frequenties te berekenen in hoofdstuk \ref{testres}.}
+	\label{gain}
+\end{figure}   
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{alfa.png}
+	\caption{Een python script om bij een combinatie van componenten gevonden in \ref{weer} de polen te vinden bij verschillende waarden van $\alpha$}
+	\label{alfa}
+\end{figure}   
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{max.png}
+	\caption{Een python script om bij een combinatie van componenten gevonden in \ref{weer} de reële maximale versterking te vinden bij verschillende waarden van $\alpha$}
+	\label{max}
+\end{figure}   
+
+
+\chapter{Simulaties \textit{LTSpice}}
+\label{LTSpice}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{schema0.png}
+	\caption{Eerste versterkingstrap met $\alpha = 0$ in \textit{LTSpice}}
+	\label{schema0}
+\end{figure}   
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{plota0.png}
+	\caption{De uitgangsspanning $V_{out}$ in functie van de frequentie $f$ bij $\alpha = 0$ en een eenheids-AC-ingangssignaal}
+	\label{plota0}
+\end{figure} 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{schema.png}
+	\caption{Eerste versterkingstrap met verschillende $\alpha$ in \textit{LTSpice}}
+	\label{schema}
+\end{figure} 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{plota.png}
+	\caption{De uitgangsspanning $V_{out}$ in functie van de frequentie $f$ bij verschillende $\alpha$ en een eenheids-AC-ingangssignaal}
+	\label{plota}
+\end{figure} 
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{DC-analyseFiguur1}
+	\caption{De spanningswaarden $V_1$, $V_2$ en $V_3$ na simulatie van de tweede trap met $R_3=\SI{560}{\ohm}$ en $R_4=\SI{1200}{\ohm}$}
+	\label{DC-analyseFiguur1}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{DC-analyseFiguur2}
+	\caption{De spanningswaarden $V_1$, $V_2$ en $V_3$ na simulatie van de tweede trap met $R_3=\SI{5600}{\ohm}$ en $R_4=\SI{12000}{\ohm}$}
+	\label{DC-analyseFiguur2}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{DC-analyseFiguur3}
+	\caption{De spanningswaarden $V_1$, $V_2$ en $V_3$ na simulatie van de tweede trap met $R_3=\SI{56}{\ohm}$ en $R_4=\SI{120}{\ohm}$}
+	\label{DC-analyseFiguur3}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.6\textwidth]{TweedeVersterkingstrap.png}
+	\caption{Tweede versterkingstrap in \textit{LTSpice}}
+	\label{SPICE2}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{VersterkingUitgangssignaalTrap2.png}
+	\caption{De uitgangsspanning $V_{out}$ in functie van de frequentie $f$. Frequenties binnen het gehoorspectrum worden versterkt met \SI{6}{\deci\bel}.}
+	\label{versterkingtrap2SPICE}
+\end{figure}
+	
+\begin{figure}[h]
+	\centering
+	\captionsetup{justification=centering}
+	\includegraphics[width=0.6\textwidth]{V2V3short.png}
+	\caption{Tweede versterkingstrap na het kortsluiten van $V_2$ en $V_3$}
+	\label{V2V3short}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{VersterkingV2V3short.png}
+	\caption{De uitgangsspanning $V_{out}$ in functie van de frequentie $f$ bij kortsluiting van $V_2$ en $V_3$. De schakeling realiseert een verzwakking van \SI{1}{\deci\bel}.}
+	\label{V2V3shortresultaat}
+\end{figure}
+	
+
+\chapter{PCB}
+\label{pcb}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.87\textwidth,angle=90]{schemapcb.png}
+	\caption{Het elektrisch schema van de versterker in \textit{Eagle}}
+	\label{schemapcb}
+\end{figure}
+
+\chapter{Testen van PCB}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{ScopeV1.png}
+	\caption{De gemeten spanning \(V_{1}\)}
+	\label{scopev1}
+\end{figure}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{ScopeV2.png}
+	\caption{De gemeten spanning \(V_{2}\)}
+	\label{scopev2}
+\end{figure}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{ScopeVout.png}
+	\caption{De gemeten spanning \(V_{out}\)}
+	\label{scopevout}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{ScopeMuziek.png}
+	\caption{Het gemeten uitgangssignaal bij een audiosignaal als input geven}
+	\label{scopemuziek}
+\end{figure}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\textwidth]{3Volt.jpg}
+	\caption{Er wordt 3\si{\V} gemeten als DC-spanning}
+	\label{3volt}
+\end{figure}
+
+\end{appendices}
+
+\end{document}
