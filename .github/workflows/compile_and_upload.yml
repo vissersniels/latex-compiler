@@ -13,7 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Cache TeX Live installation
+      uses: actions/cache@v2
+      with:
+        path: /usr/local/texlive
+        key: texlive-${{ runner.os }}
+
     - name: Install TeX Live
+      if: steps.cache.outputs.cache-hit != 'true'  # Skip installation if cache hit
       run: sudo apt-get install -y texlive-full
 
     - name: Checkout Repository
