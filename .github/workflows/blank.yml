@@ -20,9 +20,9 @@ jobs:
       uses: xu-cheng/latex-action@v2
       with:
         root_file: template.tex  # Adjust if your main LaTeX file has a different name
-        packages:                   # Add any additional LaTeX packages you need
-          - graphicx
-          - hyperref
+        packages: |
+          graphicx
+          hyperref   # Use "|" for multi-line strings
 
     - name: Compile LaTeX
       run: |
