@@ -28,8 +28,8 @@ jobs:
 
     - name: Compile LaTeX
       run: |
-        pdflatex -interaction=nonstopmode -halt-on-error template.tex
-        pdflatex -interaction=nonstopmode -halt-on-error template.tex
+        pdflatex -interaction=nonstopmode -halt-on-error main.tex
+        pdflatex -interaction=nonstopmode -halt-on-error main.tex
 
     - name: Upload PDF to gh-pages
       uses: peaceiris/actions-gh-pages@v3
