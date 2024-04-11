@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2024.3.1)  1 MAR 2024 17:03
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2024.4.11)  11 APR 2024 09:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -177,9 +177,9 @@ Language: english 2017/06/06 v3.3r English support from the babel system
 Package babel Info: Hyphen rules for 'canadian' set to \l@english
 (babel)             (\language0). Reported on input line 102.
 Package babel Info: Hyphen rules for 'australian' set to \l@ukenglish
-(babel)             (\language79). Reported on input line 105.
+(babel)             (\language21). Reported on input line 105.
 Package babel Info: Hyphen rules for 'newzealand' set to \l@ukenglish
-(babel)             (\language79). Reported on input line 108.
+(babel)             (\language21). Reported on input line 108.
 ))
 (/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
 Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
@@ -677,8 +677,8 @@ l.23 \newpage
               [1] [2] (./template.aux) ) 
 Here is how much of TeX's memory you used:
  20893 strings out of 478287
- 395130 string characters out of 5849290
- 671532 words of memory out of 5000000
+ 395130 string characters out of 5849289
+ 671530 words of memory out of 5000000
  38750 multiletter control sequences out of 15000+600000
  471383 words of font info for 35 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
